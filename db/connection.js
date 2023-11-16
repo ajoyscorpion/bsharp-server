@@ -19,5 +19,5 @@ mongoose.connect(connectionString,{
 }).then(()=>{
     console.log("Mongo db Atlas connected successfully");
 }).catch((err)=>{
-    console.log('Mongo db Connection Error : ${err}');
+    console.log(`Mongo db Connection Error : ${err}`);
 })
