@@ -1,0 +1,83 @@
+const crypto = require('crypto'); // Node.js module for hashing
+
+// Function to generate OTP (e.g., 6-digit OTP)
+const generateOTP = () => {
+    return Math.floor(100000 + Math.random() * 900000); // 6-digit OTP
+};
+
+// Function to hash the OTP with a salt
+const hashOTP = (otp) => {
+    const salt = crypto.randomBytes(16).toString('hex'); // Generate a random salt
+    const hashedOTP = crypto.pbkdf2Sync(otp.toString(), salt, 1000, 64, 'sha256').toString('hex');
+    return { hashedOTP, salt };
+};
+
+// Function to store hashed OTP in the database
+const storeHashedOTP = async (mobileNumber, otp) => {
+    const { hashedOTP, salt } = hashOTP(otp);
+    
+    // Store hashed OTP, salt, mobile number, and expiration time in your database
+    // Example using a hypothetical database service
+    const expirationTime = Date.now() + 5 * 60 * 1000; // OTP expires in 5 minutes
+    
+    // Assuming 'OTPCollection' is your MongoDB collection
+    await OTPCollection.updateOne(
+        { mobileNumber },
+        {
+            $set: {
+                hashedOTP,
+                salt,
+                expirationTime,
+            },
+        },
+        { upsert: true }
+    );
+    console.log('OTP Stored Successfully');
+};
+
+
+
+
+
+
+
+
+
+
+
+// Function to verify entered OTP by comparing it with the stored hash
+const verifyHashedOTP = (enteredOtp, storedHashedOTP, storedSalt) => {
+    // Hash the entered OTP with the stored salt
+    const hashedEnteredOTP = crypto.pbkdf2Sync(enteredOtp.toString(), storedSalt, 1000, 64, 'sha256').toString('hex');
+    
+    // Compare the hashed entered OTP with the stored hashed OTP
+    return hashedEnteredOTP === storedHashedOTP;
+};
+
+// Function to check if OTP is expired
+const isOTPExpired = (expirationTime) => {
+    return Date.now() > expirationTime;
+};
+
+// Function to verify OTP
+const verifyOTP = async (mobileNumber, otp) => {
+    // Retrieve stored hashed OTP, salt, and expiration time from the database
+    const storedOTP = await OTPCollection.findOne({ mobileNumber });
+
+    if (!storedOTP) {
+        throw new Error('No OTP record found');
+    }
+
+    // Check if OTP is expired
+    if (isOTPExpired(storedOTP.expirationTime)) {
+        throw new Error('OTP expired');
+    }
+
+    // Verify the OTP
+    const isValid = verifyHashedOTP(otp, storedOTP.hashedOTP, storedOTP.salt);
+    if (isValid) {
+        return true; // OTP verified successfully
+    } else {
+        throw new Error('Invalid OTP');
+    }
+};
